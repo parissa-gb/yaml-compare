@@ -75,3 +75,6 @@ python3 yaml-compare.py dev.yaml prod.yaml --html report.html
 |------|-------------|
 | **Console** | Formatted table with numbered differences |
 | **HTML** | Interactive report with summary cards, collapsible sections, theme switcher |
+
+<img width="1235" height="1234" alt="image" src="https://github.com/user-attachments/assets/fcf00009-626e-497e-af44-75057253fb22" />
+
