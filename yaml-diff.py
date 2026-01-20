@@ -497,7 +497,11 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
             max-width: 380px;
             padding: 14px 20px;
             border-radius: 10px;
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            cursor: text;
         }}
+
         .value-old {{
             background: var(--value-old-bg);
             border-left: 5px solid var(--value-old-border);
@@ -508,6 +512,18 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
             border-left: 5px solid var(--value-new-border);
             color: var(--value-new-text);
         }}
+
+        .value-cell {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }}
+        .value-text {{
+            flex: 1;
+            word-break: break-all;
+        }}
+
         
         /* ========== ITEM LISTS ========== */
         .item-list {{
@@ -655,6 +671,62 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
         .control-btn:hover {{
             background: var(--button-hover-bg);
         }}
+        
+        /* ========== TEXT SELECTION & COPY ========== */
+        .section-content,
+        .value-cell,
+        .path-cell,
+        .item-path,
+        .item-value,
+        td,
+        .file-badge {{
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }}
+        .copyable {{
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }}
+        .copy-btn {{
+            background: var(--button-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 0.85em;
+            color: var(--button-text);
+            transition: all 0.2s ease;
+            opacity: 0.7;
+            flex-shrink: 0;
+        }}
+        .copy-btn:hover {{
+            opacity: 1;
+            background: var(--button-hover-bg);
+        }}
+        .copy-btn.copied {{
+            background: var(--accent-file2);
+            color: white;
+            border-color: var(--accent-file2);
+        }}
+        .item-content {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex: 1;
+            gap: 12px;
+        }}
+        .final-key {{
+            background: var(--bg-tertiary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }}
+
         
         /* ========== FOOTER ========== */
         footer {{
@@ -812,14 +884,27 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
                 )
                 old_val = escape_html(str(change['old_value']))
                 new_val = escape_html(str(change['new_value']))
+                old_val_attr = old_val.replace("'", "&#39;")
+                new_val_attr = new_val.replace("'", "&#39;")
                 html += f"""
                         <tr>
                             <td><span class="row-number">{row_num}</span></td>
                             <td class="path-cell">{path_formatted}</td>
-                            <td><div class="value-cell value-old">{old_val}</div></td>
-                            <td><div class="value-cell value-new">{new_val}</div></td>
+                            <td>
+                                <div class="value-cell value-old">
+                                    <span class="value-text">{old_val}</span>
+                                    <button class="copy-btn" data-copy="{old_val_attr}" onclick="copyFromData(this)" title="Copy value">📋</button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="value-cell value-new">
+                                    <span class="value-text">{new_val}</span>
+                                    <button class="copy-btn" data-copy="{new_val_attr}" onclick="copyFromData(this)" title="Copy value">📋</button>
+                                </div>
+                            </td>
                         </tr>
 """
+
                 row_num += 1
             html += """
                     </tbody>
@@ -846,10 +931,18 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
             item_num = 1
             for item in diff['dictionary_item_removed']:
                 path_clean = clean_path(str(item))
+                path_parts = path_clean.split(' → ')
+                final_key = path_parts[-1] if path_parts else path_clean
+                path_prefix = ' → '.join(path_parts[:-1]) + ' → ' if len(path_parts) > 1 else ''
+                # Escape for HTML attribute
+                final_key_attr = escape_html(final_key).replace("'", "&#39;")
                 html += f"""
                     <li>
                         <span class="item-number remove">{item_num}</span>
-                        <span class="item-path">{escape_html(path_clean)}</span>
+                        <div class="item-content">
+                            <span class="item-path">{escape_html(path_prefix)}<span class="final-key">{escape_html(final_key)}</span></span>
+                            <button class="copy-btn" data-copy="{final_key_attr}" onclick="copyFromData(this)" title="Copy key">📋</button>
+                        </div>
                     </li>
 """
                 item_num += 1
@@ -859,6 +952,7 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
         </div>
 """
             section_num += 1
+
         
         # Only in File 2 (dictionary_item_added)
         if 'dictionary_item_added' in diff:
@@ -877,10 +971,18 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
             item_num = 1
             for item in diff['dictionary_item_added']:
                 path_clean = clean_path(str(item))
+                path_parts = path_clean.split(' → ')
+                final_key = path_parts[-1] if path_parts else path_clean
+                path_prefix = ' → '.join(path_parts[:-1]) + ' → ' if len(path_parts) > 1 else ''
+                # Escape for HTML attribute
+                final_key_attr = escape_html(final_key).replace("'", "&#39;")
                 html += f"""
                     <li>
                         <span class="item-number add">{item_num}</span>
-                        <span class="item-path">{escape_html(path_clean)}</span>
+                        <div class="item-content">
+                            <span class="item-path">{escape_html(path_prefix)}<span class="final-key">{escape_html(final_key)}</span></span>
+                            <button class="copy-btn" data-copy="{final_key_attr}" onclick="copyFromData(this)" title="Copy key">📋</button>
+                        </div>
                     </li>
 """
                 item_num += 1
@@ -890,6 +992,7 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
         </div>
 """
             section_num += 1
+
         
         # List items only in File 1
         if 'iterable_item_removed' in diff:
@@ -990,6 +1093,20 @@ def generate_html_report(diff, file1_name, file2_name, config_key1, config_key2,
         function collapseAll() {
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.add('collapsed');
+            });
+        }
+        
+        function copyFromData(btn) {
+            var text = btn.getAttribute('data-copy');
+            navigator.clipboard.writeText(text).then(function() {
+                btn.classList.add('copied');
+                btn.textContent = '✓';
+                setTimeout(function() {
+                    btn.classList.remove('copied');
+                    btn.textContent = '📋';
+                }, 1500);
+            }).catch(function(err) {
+                console.error('Copy failed:', err);
             });
         }
         
